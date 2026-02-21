@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { io } from 'socket.io-client'
 import './App.css'
 
 const starterPrompts = [
@@ -8,8 +7,9 @@ const starterPrompts = [
   'Help me plan a productive routine',
 ]
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+
 function App() {
-  const [socket, setSocket] = useState(null)
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([])
   const [isBotTyping, setIsBotTyping] = useState(false)
@@ -18,7 +18,28 @@ function App() {
 
   const canSend = useMemo(() => input.trim().length > 0, [input])
 
-  const handleSend = (customText) => {
+  const checkHealth = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/health`)
+      setIsConnected(response.ok)
+    } catch {
+      setIsConnected(false)
+    }
+  }
+
+  const askBackend = async (text) => {
+    const response = await fetch(`${API_BASE_URL}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text }),
+    })
+
+    if (!response.ok) throw new Error('Backend response failed')
+
+    return response.json()
+  }
+
+  const handleSend = async (customText) => {
     const finalText = (customText ?? input).trim()
     if (!finalText) return
 
@@ -30,13 +51,33 @@ function App() {
     }
 
     setMessages((prev) => [...prev, userMessage])
-
-    if (socket) {
-      socket.emit('ai-message', finalText)
-      setIsBotTyping(true)
-    }
-
     setInput('')
+    setIsBotTyping(true)
+
+    try {
+      const data = await askBackend(finalText)
+      const botMessage = {
+        id: Date.now() + Math.random(),
+        text: data?.response || 'I could not generate a response right now.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'bot',
+      }
+      setMessages((prevMessages) => [...prevMessages, botMessage])
+      setIsConnected(true)
+    } catch {
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          id: Date.now() + Math.random(),
+          text: 'Backend connection failed. Please check server configuration.',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sender: 'bot',
+        },
+      ])
+      setIsConnected(false)
+    } finally {
+      setIsBotTyping(false)
+    }
   }
 
   const handleKeyDown = (e) => {
@@ -47,27 +88,9 @@ function App() {
   }
 
   useEffect(() => {
-    const socketInstance = io('http://localhost:3000')
-    setSocket(socketInstance)
-
-    socketInstance.on('connect', () => setIsConnected(true))
-    socketInstance.on('disconnect', () => setIsConnected(false))
-
-    socketInstance.on('ai-message-response', (responseObj) => {
-      const botMessage = {
-        id: Date.now() + Math.random(),
-        text: responseObj?.response || 'I could not generate a response right now.',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        sender: 'bot',
-      }
-
-      setMessages((prevMessages) => [...prevMessages, botMessage])
-      setIsBotTyping(false)
-    })
-
-    return () => {
-      socketInstance.disconnect()
-    }
+    checkHealth()
+    const interval = setInterval(checkHealth, 7000)
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
@@ -137,8 +160,8 @@ function App() {
             className="chat-input"
             aria-label="Type your message"
           />
-          <button onClick={() => handleSend()} className="send-btn" disabled={!canSend}>
-            Send
+          <button onClick={() => handleSend()} className="send-btn" disabled={!canSend || isBotTyping}>
+            {isBotTyping ? 'Sending...' : 'Send'}
           </button>
         </footer>
       </section>

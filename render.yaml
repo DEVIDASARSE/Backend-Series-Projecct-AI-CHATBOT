@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: ai-chatbot-backend
+    env: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 3000
+
+  - type: web
+    name: ai-chatbot-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: ai-chatbot-backend
+          type: web
+          property: host
