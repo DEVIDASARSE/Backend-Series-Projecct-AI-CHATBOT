@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ai-chatbot-backend
+    env: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 3000
