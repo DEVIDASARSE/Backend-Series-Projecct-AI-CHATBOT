@@ -6,9 +6,6 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: npm start
-    envVars:
-      - key: PORT
-        value: 3000
 
   - type: web
     name: ai-chatbot-frontend

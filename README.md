@@ -27,6 +27,11 @@ This repo includes `render.yaml` for one-click style infrastructure setup.
 - `ai-chatbot-backend` (Node web service)
 - `ai-chatbot-frontend` (static site)
 
+### Production configuration notes
+- Backend `PORT` is **not hardcoded** in `render.yaml`; Render injects the runtime port automatically.
+- Frontend `VITE_API_BASE_URL` is wired from the backend service host in `render.yaml`.
+- Frontend also normalizes host-only values (for example `my-api.onrender.com`) to `https://...` automatically, so backend calls work in production without manual code edits.
+
 ### Deploy steps
 1. Push this repository to GitHub.
 2. In Render, create a **Blueprint** and point to this repo.
