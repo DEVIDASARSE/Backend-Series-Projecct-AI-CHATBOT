@@ -251,8 +251,29 @@
   border-top: 1px solid var(--line);
   padding: 0.85rem;
   display: flex;
-  gap: 0.6rem;
+  flex-direction: column;
+  gap: 0.55rem;
   background: #fff;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.connection-warning {
+  margin: 0;
+  color: #b45309;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  padding: 0.48rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+.connection-warning code {
+  font-size: 0.76rem;
+  color: #92400e;
 }
 
 .chat-input {

@@ -19,6 +19,8 @@ const makeSimpleReply = (message) => {
 }
 
 const server = http.createServer((req, res) => {
+  const path = req.url?.split('?')[0] || '/'
+
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
@@ -28,11 +30,19 @@ const server = http.createServer((req, res) => {
     return res.end()
   }
 
-  if (req.url === '/health' && req.method === 'GET') {
+  if (path === '/' && req.method === 'GET') {
+    return sendJson(res, 200, {
+      ok: true,
+      service: 'ai-chatbot-backend',
+      endpoints: ['/health', '/chat'],
+    })
+  }
+
+  if (path === '/health' && req.method === 'GET') {
     return sendJson(res, 200, { ok: true, service: 'backend', port: PORT })
   }
 
-  if (req.url === '/chat' && req.method === 'POST') {
+  if (path === '/chat' && req.method === 'POST') {
     let body = ''
     req.on('data', (chunk) => {
       body += chunk
