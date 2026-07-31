@@ -7,7 +7,18 @@ const starterPrompts = [
   'Help me plan a productive routine',
 ]
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+const resolveApiBaseUrl = () => {
+  const rawValue = import.meta.env.VITE_API_BASE_URL?.trim()
+  if (!rawValue) return 'http://localhost:3000'
+
+  if (/^https?:\/\//i.test(rawValue)) {
+    return rawValue.replace(/\/+$/, '')
+  }
+
+  return `https://${rawValue.replace(/\/+$/, '')}`
+}
+
+const API_BASE_URL = resolveApiBaseUrl()
 
 function App() {
   const [input, setInput] = useState('')
