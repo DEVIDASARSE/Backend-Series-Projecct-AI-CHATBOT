@@ -7,27 +7,44 @@ const starterPrompts = [
   'Help me plan a productive routine',
 ]
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+const normalizeApiBaseUrl = (value) => {
+  const trimmed = String(value || '').trim().replace(/\/$/, '')
+  if (!trimmed) return import.meta.env.DEV ? 'http://localhost:3000' : ''
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
+const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL)
 
 function App() {
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([])
   const [isBotTyping, setIsBotTyping] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
+  const [isCheckingConnection, setIsCheckingConnection] = useState(true)
   const historyRef = useRef(null)
 
   const canSend = useMemo(() => input.trim().length > 0, [input])
 
   const checkHealth = async () => {
     try {
+      setIsCheckingConnection(true)
+      if (!API_BASE_URL) {
+        setIsConnected(false)
+        return
+      }
       const response = await fetch(`${API_BASE_URL}/health`)
       setIsConnected(response.ok)
     } catch {
       setIsConnected(false)
+    } finally {
+      setIsCheckingConnection(false)
     }
   }
 
   const askBackend = async (text) => {
+    if (!API_BASE_URL) throw new Error('Missing API base URL')
+
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -69,7 +86,7 @@ function App() {
         ...prevMessages,
         {
           id: Date.now() + Math.random(),
-          text: 'Backend connection failed. Please check server configuration.',
+          text: 'Connection failed. Please verify backend deployment and VITE_API_BASE_URL.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           sender: 'bot',
         },
@@ -111,7 +128,7 @@ function App() {
 
           <span className={`status-pill ${isConnected ? 'online' : 'offline'}`}>
             <span className="status-dot" />
-            {isConnected ? 'Connected' : 'Connecting'}
+            {isConnected ? 'Connected' : isCheckingConnection ? 'Checking...' : 'Offline'}
           </span>
         </header>
 
@@ -151,18 +168,25 @@ function App() {
         </div>
 
         <footer className="chat-input-area">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask anything..."
-            className="chat-input"
-            aria-label="Type your message"
-          />
-          <button onClick={() => handleSend()} className="send-btn" disabled={!canSend || isBotTyping}>
-            {isBotTyping ? 'Sending...' : 'Send'}
-          </button>
+          {!isConnected && !isCheckingConnection && (
+            <p className="connection-warning">
+              Unable to reach backend. Update <code>VITE_API_BASE_URL</code> and retry.
+            </p>
+          )}
+          <div className="chat-input-row">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask anything..."
+              className="chat-input"
+              aria-label="Type your message"
+            />
+            <button onClick={() => handleSend()} className="send-btn" disabled={!canSend || isBotTyping}>
+              {isBotTyping ? 'Sending...' : 'Send'}
+            </button>
+          </div>
         </footer>
       </section>
     </main>
